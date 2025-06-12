@@ -1,4 +1,5 @@
 import io
+import os
 from flask import Flask, render_template, send_file, request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -8,7 +9,7 @@ from models import Base, SurveyConfig, SurveyQuestion, SurveyAnswer
 
 app = Flask(__name__)
 # Update your DATABASE_URL accordingly
-DATABASE_URL = 'postgresql://user:pass@host:port/dbname'
+DATABASE_URL = os.getenv("DATABASE_URL")  # Load from environment
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 
