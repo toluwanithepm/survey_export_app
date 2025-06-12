@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Survey Exports</title>
+  <style>
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #f4f4f4; }
+    button { padding: 6px 12px; margin: 0; }
+  </style>
+</head>
+<body>
+  <h1>Available Surveys</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Download</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in surveys %}
+      <tr>
+        <td>{{ s.survey_config_id }}</td>
+        <td>{{ s.name }}</td>
+        <td>{{ s.description }}</td>
+        <td>
+          <form action="/download" method="get">
+            <input type="hidden" name="survey_config_id" value="{{ s.survey_config_id }}">
+            <button type="submit">Download CSV</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
