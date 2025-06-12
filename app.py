@@ -9,7 +9,11 @@ from models import Base, SurveyConfig, SurveyQuestion, SurveyAnswer
 
 app = Flask(__name__)
 # Update your DATABASE_URL accordingly
-DATABASE_URL = os.getenv("DATABASE_URL")  # Load from environment
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 
