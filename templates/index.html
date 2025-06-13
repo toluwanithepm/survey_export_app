@@ -15,72 +15,56 @@
       --border: #e0e0e0;
     }
 
-    * { box-sizing: border-box; }
+    [data-theme="dark"] {
+      --primary: #66bb6a;
+      --primary-light: #81c784;
+      --on-primary: #000000;
+      --background: #121212;
+      --surface: #1e1e1e;
+      --text: #e0e0e0;
+      --border: #333;
+    }
 
+    * { box-sizing: border-box; transition: background 0.3s, color 0.3s; }
     body {
-      margin: 0;
-      padding: 2rem;
+      margin: 0; padding: 2rem;
       font-family: 'Segoe UI', sans-serif;
       background: var(--background);
       color: var(--text);
-      display: flex;
-      flex-direction: column;
+      display: flex; flex-direction: column;
       align-items: center;
+      min-height: 100vh;
     }
 
-    h1 {
-      color: var(--primary);
-      margin-bottom: 1rem;
-      text-align: center;
-    }
+    h1 { color: var(--primary); margin-bottom: 1rem; }
 
-    .controls {
-      margin-bottom: 1rem;
+    .controls, .search-bar {
       display: flex;
-      gap: 1rem;
       flex-wrap: wrap;
-      justify-content: center;
+      gap: 1rem; justify-content: center;
+      margin-bottom: 1rem;
     }
 
-    .controls label {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    select,
-    input[type="number"] {
-      padding: 0.5rem;
-      border: 1px solid var(--border);
-      border-radius: 4px;
+    select, input[type="number"], input[type="text"] {
+      padding: 0.5rem; border: 1px solid var(--border);
+      border-radius: 4px; background: var(--surface);
+      color: var(--text);
     }
 
     button {
-      background: var(--primary);
-      color: var(--on-primary);
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
-      cursor: pointer;
+      background: var(--primary); color: var(--on-primary);
+      border: none; padding: 0.5rem 1rem;
+      border-radius: 4px; cursor: pointer;
       transition: background 0.2s;
     }
 
-    button:hover {
-      background: var(--primary-light);
-    }
-
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-      max-width: 100%;
-    }
+    button:hover { background: var(--primary-light); }
 
     table {
-      width: 100%;
-      min-width: 600px;
+      width: 100%; max-width: 800px;
       border-collapse: collapse;
       background: var(--surface);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       margin-bottom: 1rem;
     }
 
@@ -93,51 +77,68 @@
     th {
       background: var(--primary);
       color: var(--on-primary);
-      position: sticky;
-      top: 0;
-      z-index: 1;
+      position: sticky; top: 0;
     }
 
     tbody tr:nth-child(even) { background: var(--background); }
     tbody tr:hover { background: var(--primary-light); color: var(--on-primary); }
 
-    .pagination {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      justify-content: center;
+    .pagination { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .pagination button[disabled] { opacity: 0.5; cursor: default; }
+
+    .toast {
+      position: fixed; bottom: 1rem; right: 1rem;
+      padding: 1rem 1.5rem; border-radius: 5px;
+      background: var(--primary-light); color: var(--on-primary);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      transform: translateY(20px);
+      z-index: 9999;
     }
 
-    .pagination button[disabled] {
-      opacity: 0.5;
-      cursor: default;
+    .toast.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
     }
 
-    @media (max-width: 768px) {
-      body { padding: 1rem; }
+    .theme-toggle {
+      margin-bottom: 1rem;
+      background: none;
+      border: 2px solid var(--primary);
+      color: var(--primary);
+      padding: 0.4rem 0.8rem;
+    }
 
-      .controls {
-        flex-direction: column;
-        align-items: stretch;
-      }
+    .spinner {
+      border: 4px solid var(--border);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+      display: none;
+    }
 
-      .controls label {
-        justify-content: space-between;
-        width: 100%;
-      }
+    .spinner.show {
+      display: block;
+    }
 
-      select, input[type="number"], button {
-        width: 100%;
-      }
-
-      table {
-        font-size: 0.9rem;
-      }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
-<body>
+<body data-theme="light">
+
+  <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+
   <h1>Available Surveys</h1>
+
+  <form class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search surveys...">
+  </form>
 
   <form class="controls" method="get" action="/">
     <label>Show
@@ -153,28 +154,28 @@
     <span>of {{ total_pages }}</span>
   </form>
 
-  <div class="table-container">
-    <table id="surveyTable">
-      <thead>
-        <tr><th>ID</th><th>Name</th><th>Description</th><th>Download</th></tr>
-      </thead>
-      <tbody>
-        {% for s in surveys %}
-        <tr data-id="{{ s.survey_config_id }}">
-          <td>{{ s.survey_config_id }}</td>
-          <td>{{ s.name }}</td>
-          <td>{{ s.description }}</td>
-          <td>
-            <form action="/download" method="get">
-              <input type="hidden" name="survey_config_id" value="{{ s.survey_config_id }}">
-              <button type="submit">Download</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <div class="spinner" id="spinner"></div>
+
+  <table id="surveyTable">
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>Description</th><th>Download</th></tr>
+    </thead>
+    <tbody>
+      {% for s in surveys %}
+      <tr data-id="{{ s.survey_config_id }}">
+        <td>{{ s.survey_config_id }}</td>
+        <td>{{ s.name }}</td>
+        <td>{{ s.description }}</td>
+        <td>
+          <form action="/download" method="get" onsubmit="return showToast(event)">
+            <input type="hidden" name="survey_config_id" value="{{ s.survey_config_id }}">
+            <button type="submit">Download</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
   <div class="pagination">
     <form method="get" action="/">
@@ -186,14 +187,65 @@
     </form>
   </div>
 
+  <div class="toast" id="toast">Download successful</div>
+
   <script>
+    const themeToggle = document.querySelector('.theme-toggle');
+    function toggleTheme() {
+      const currentTheme = document.body.getAttribute("data-theme");
+      document.body.setAttribute("data-theme", currentTheme === "dark" ? "light" : "dark");
+    }
+
+    function showToast(e) {
+      e.preventDefault();
+      const form = e.target;
+      fetch(form.action + '?survey_config_id=' + form.survey_config_id.value)
+        .then(res => {
+          if (!res.ok) throw new Error("Download failed");
+          return res.blob();
+        })
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = "survey_" + Date.now() + ".xlsx";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showNotification("Download successful ✅");
+        })
+        .catch(() => showNotification("Download failed ❌"));
+      return false;
+    }
+
+    function showNotification(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 3000);
+    }
+
+    // Search Filter
+    const searchInput = document.getElementById("searchInput");
+    searchInput.addEventListener("input", () => {
+      const filter = searchInput.value.toLowerCase();
+      document.querySelectorAll("#surveyTable tbody tr").forEach(row => {
+        const name = row.children[1].textContent.toLowerCase();
+        const desc = row.children[2].textContent.toLowerCase();
+        row.style.display = name.includes(filter) || desc.includes(filter) ? "" : "none";
+      });
+    });
+
+    // Real-time fetch with spinner and animation
     const surveyLimit = JSON.parse('{{ limit | tojson }}');
     const currentPage = JSON.parse('{{ page | tojson }}');
-    const refreshInterval = 5000; // 5 seconds
+    const refreshInterval = 5000;
     const tableBody = document.querySelector('#surveyTable tbody');
     const existingIds = new Set(Array.from(tableBody.querySelectorAll('tr')).map(r => r.dataset.id));
+    const spinner = document.getElementById("spinner");
 
     async function fetchSurveys() {
+      spinner.classList.add("show");
       try {
         const res = await fetch('/api/surveys');
         const data = await res.json();
@@ -206,22 +258,26 @@
             if (rowIndex >= start && rowIndex < end) {
               const tr = document.createElement('tr');
               tr.dataset.id = s.id;
+              tr.style.opacity = 0;
               tr.innerHTML = `
                 <td>${s.id}</td>
                 <td>${s.name}</td>
                 <td>${s.description}</td>
                 <td>
-                  <form action="/download" method="get">
+                  <form action="/download" method="get" onsubmit="return showToast(event)">
                     <input type="hidden" name="survey_config_id" value="${s.id}">
                     <button type="submit">Download</button>
                   </form>
                 </td>`;
               tableBody.appendChild(tr);
+              setTimeout(() => tr.style.opacity = 1, 100); // animate fade-in
             }
           }
         });
       } catch (e) {
         console.error('Real-time fetch error', e);
+      } finally {
+        spinner.classList.remove("show");
       }
     }
 

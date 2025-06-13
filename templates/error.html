@@ -5,15 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Error {{ code }}</title>
   <style>
-    body { display:flex;justify-content:center;align-items:center;height:100vh;
-           margin:0;background:#fafafa;font-family:'Segoe UI',sans-serif; }
-    .card { text-align:center; background:#fff;padding:2rem; border-radius:8px;
-            box-shadow:0 4px 8px rgba(0,0,0,0.1); max-width:400px; }
-    .card svg { width:120px; height:120px; margin-bottom:1rem; }
-    h1 { color:#d32f2f; margin-bottom:0.5rem; }
-    p { color:#424242; margin-bottom:1rem; }
-    a { color:#d32f2f; text-decoration:none; font-weight:bold; }
-    a:hover { text-decoration:underline; }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: #fafafa;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 1rem;
+    }
+
+    .card {
+      text-align: center;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .card svg {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      color: #d32f2f;
+      margin-bottom: 0.5rem;
+      font-size: 1.8rem;
+    }
+
+    p {
+      color: #424242;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+
+    a {
+      color: #d32f2f;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 480px) {
+      .card {
+        padding: 1.5rem;
+      }
+
+      .card svg {
+        width: 80px;
+        height: 80px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      p, a {
+        font-size: 0.95rem;
+      }
+    }
   </style>
 </head>
 <body>
