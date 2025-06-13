@@ -77,7 +77,7 @@ def download():
         as_attachment=True,
         download_name=f'survey_{survey_id}_responses.csv'
     )
-#if code breaks, delete line 80-91
+# if code breaks, delete line 80-91
 @app.route('/api/surveys')
 def api_surveys():
     # Return full list of surveys for real-time updates

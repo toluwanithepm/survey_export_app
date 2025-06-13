@@ -5,62 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Survey Exports</title>
   <style>
+    /* Theme Variables */
     :root {
       --primary: #2e7d32;
       --primary-light: #60ad5e;
       --on-primary: #ffffff;
       --background: #f9f9f9;
       --surface: #ffffff;
-      --text-primary: #212121;
-      --text-secondary: #424242;
+      --text: #212121;
       --border: #e0e0e0;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; }
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0; padding: 2rem;
+      font-family: 'Segoe UI', sans-serif;
       background: var(--background);
-      color: var(--text-primary);
-      padding: 2rem;
-      display: flex;
-      flex-direction: column;
+      color: var(--text);
+      display: flex; flex-direction: column;
       align-items: center;
     }
-    h1 {
-      color: var(--primary);
-      margin-bottom: 1rem;
-    }
-    .controls {
-      margin-bottom: 1rem;
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-    }
+    h1 { color: var(--primary); margin-bottom: 1rem; }
+    .controls { margin-bottom: 1rem; display: flex; gap: 1rem; }
     select, input[type="number"] {
-      padding: 0.5rem;
-      border: 1px solid var(--border);
+      padding: 0.5rem; border: 1px solid var(--border);
       border-radius: 4px;
-      font-size: 1rem;
     }
     button {
-      background: var(--primary);
-      color: var(--on-primary);
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.2s ease-in-out;
+      background: var(--primary); color: var(--on-primary);
+      border: none; padding: 0.5rem 1rem;
+      border-radius: 4px; cursor: pointer;
+      transition: background 0.2s;
     }
-    button:hover {
-      background: var(--primary-light);
-    }
+    button:hover { background: var(--primary-light); }
     table {
-      width: 100%;
-      max-width: 800px;
+      width: 100%; max-width: 800px;
       border-collapse: collapse;
       background: var(--surface);
-      margin-bottom: 1rem;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
     }
     th, td {
       padding: 0.75rem 1rem;
@@ -70,61 +52,44 @@
     th {
       background: var(--primary);
       color: var(--on-primary);
-      position: sticky;
-      top: 0;
+      position: sticky; top: 0;
     }
     tbody tr:nth-child(even) { background: var(--background); }
     tbody tr:hover { background: var(--primary-light); color: var(--on-primary); }
-    .pagination {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-    }
-    .pagination button[disabled] {
-      opacity: 0.5;
-      cursor: default;
-    }
+    .pagination { display: flex; gap: 0.5rem; }
+    .pagination button[disabled] { opacity: 0.5; cursor: default; }
   </style>
 </head>
 <body>
   <h1>Available Surveys</h1>
   <form class="controls" method="get" action="/">
-    <label>
-      Show
-      <select name="limit" onchange="this.form.submit()">
-        <option value="20" {% if limit == 20 %}selected{% endif %}>20</option>
-        <option value="30" {% if limit == 30 %}selected{% endif %}>30</option>
-        <option value="40" {% if limit == 40 %}selected{% endif %}>40</option>
-        <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
-      </select>
-      per page
+    <label>Show
+      <select id="limitSelect" name="limit" onchange="this.form.submit()">
+        {% for opt in [20,30,40,50] %}
+        <option value="{{ opt }}" {% if limit==opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select> per page
     </label>
-    <label>
-      Page
-      <input type="number" name="page" value="{{ page }}" min="1" max="{{ total_pages }}" onchange="this.form.submit()">
+    <label>Page
+      <input type="number" id="pageInput" name="page" value="{{ page }}" min="1" max="{{ total_pages }}" onchange="this.form.submit()">
     </label>
     <span>of {{ total_pages }}</span>
   </form>
 
-  <table>
+  <table id="surveyTable">
     <thead>
-      <tr>
-        <th scope="col">ID</th>
-        <th scope="col">Name</th>
-        <th scope="col">Description</th>
-        <th scope="col">Download</th>
-      </tr>
+      <tr><th>ID</th><th>Name</th><th>Description</th><th>Download</th></tr>
     </thead>
     <tbody>
       {% for s in surveys %}
-      <tr>
+      <tr data-id="{{ s.survey_config_id }}">
         <td>{{ s.survey_config_id }}</td>
         <td>{{ s.name }}</td>
         <td>{{ s.description }}</td>
         <td>
           <form action="/download" method="get">
             <input type="hidden" name="survey_config_id" value="{{ s.survey_config_id }}">
-            <button type="submit">Download CSV</button>
+            <button type="submit">Download</button>
           </form>
         </td>
       </tr>
@@ -135,11 +100,54 @@
   <div class="pagination">
     <form method="get" action="/">
       <input type="hidden" name="limit" value="{{ limit }}">
-      <button type="submit" name="page" value="1" {% if page == 1 %}disabled{% endif %}>&laquo; First</button>
-      <button type="submit" name="page" value="{{ page - 1 }}" {% if page == 1 %}disabled{% endif %}>&lt; Prev</button>
-      <button type="submit" name="page" value="{{ page + 1 }}" {% if page == total_pages %}disabled{% endif %}>Next &gt;</button>
-      <button type="submit" name="page" value="{{ total_pages }}" {% if page == total_pages %}disabled{% endif %}>Last &raquo;</button>
+      <button name="page" value="1" {% if page==1 %}disabled{% endif %}>&laquo; First</button>
+      <button name="page" value="{{ page-1 }}" {% if page==1 %}disabled{% endif %}>&lt; Prev</button>
+      <button name="page" value="{{ page+1 }}" {% if page==total_pages %}disabled{% endif %}>Next &gt;</button>
+      <button name="page" value="{{ total_pages }}" {% if page==total_pages %}disabled{% endif %}>Last &raquo;</button>
     </form>
   </div>
+
+  <script>
+    // Real-time polling for new surveys
+    const surveyLimit = JSON.parse('{{ limit | tojson }}');
+    const currentPage = JSON.parse('{{ page | tojson }}');
+    const refreshInterval = 5000; // 5 seconds
+    const tableBody = document.querySelector('#surveyTable tbody');
+    const existingIds = new Set(Array.from(tableBody.querySelectorAll('tr')).map(r => r.dataset.id));
+
+    async function fetchSurveys() {
+      try {
+        const res = await fetch('/api/surveys');
+        const data = await res.json();
+        data.forEach(s => {
+          if (!existingIds.has(String(s.id))) {
+            existingIds.add(String(s.id));
+            // Only append if it fits current page & limit
+            const rowIndex = data.findIndex(x => x.id === s.id);
+            const start = (currentPage - 1) * surveyLimit;
+            const end = start + surveyLimit;
+            if (rowIndex >= start && rowIndex < end) {
+              const tr = document.createElement('tr');
+              tr.dataset.id = s.id;
+              tr.innerHTML = `
+                <td>${s.id}</td>
+                <td>${s.name}</td>
+                <td>${s.description}</td>
+                <td>
+                  <form action="/download" method="get">
+                    <input type="hidden" name="survey_config_id" value="${s.id}">
+                    <button type="submit">Download</button>
+                  </form>
+                </td>`;
+              tableBody.appendChild(tr);
+            }
+          }
+        });
+      } catch (e) {
+        console.error('Real-time fetch error', e);
+      }
+    }
+    setInterval(fetchSurveys, refreshInterval);
+  </script>
 </body>
 </html>
