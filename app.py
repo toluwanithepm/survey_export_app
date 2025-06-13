@@ -1,6 +1,6 @@
 import io
 import os
-from flask import Flask, render_template, send_file, request
+from flask import Flask, render_template, send_file, request, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
@@ -77,6 +77,18 @@ def download():
         as_attachment=True,
         download_name=f'survey_{survey_id}_responses.csv'
     )
+#if code breaks, delete line 80-91
+@app.route('/api/surveys')
+def api_surveys():
+    # Return full list of surveys for real-time updates
+    session = Session()
+    surveys = session.query(SurveyConfig).order_by(SurveyConfig.survey_config_id).all()
+    session.close()
+    data = [
+        { 'id': s.survey_config_id, 'name': s.name, 'description': s.description }
+        for s in surveys
+    ]
+    return jsonify(data)
 
 # Error handlers
 @app.errorhandler(404)
