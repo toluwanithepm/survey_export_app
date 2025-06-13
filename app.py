@@ -82,12 +82,12 @@ def download():
 @app.errorhandler(404)
 def not_found(e):
     return render_template('error.html', code=404,
-                           message='Page Not Found'), 404
+                           message='Looks like this page took a coffee break.'), 404
 
 @app.errorhandler(500)
 def server_error(e):
     return render_template('error.html', code=500,
-                           message='Internal Server Error'), 500
+                           message='Something went sideways on our end.'), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
