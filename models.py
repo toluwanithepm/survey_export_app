@@ -33,7 +33,7 @@ class SurveyQuestion(Base):
 class SurveyAnswer(Base):
     __tablename__ = 'survey_answer_entity'
     unique_member_id = Column(String, primary_key=True)
-    survey_question_id = Column(Integer, ForeignKey('survey_questions_entity.survey_question_id'), primary_key=True)
+    survey_question_id = Column(Integer, ForeignKey('survey_question_entity.survey_question_id'), primary_key=True)
     survey_log_id = Column(Integer, primary_key=True)
     ik_number = Column(String)
     answer = Column(Text)
