@@ -13,8 +13,12 @@ load_dotenv()
 DATABASE_URL = os.getenv('DATABASE_URL')
 
 # Initialize app & DB
+env_url = os.getenv('DATABASE_URL')
+if not env_url:
+    raise RuntimeError("DATABASE_URL is not set in environment variables")
+
 app = Flask(__name__)
-engine = create_engine(DATABASE_URL)
+engine = create_engine(env_url)
 Session = sessionmaker(bind=engine)
 
 @app.route('/')
@@ -44,48 +48,82 @@ def index():
 @app.route('/download')
 def download():
     survey_id = request.args.get('survey_config_id', type=int)
+    if not survey_id:
+        return "Missing survey_config_id", 400
+
     session = Session()
-    df = pd.read_sql(
+    # Join the three tables to collect all information
+    query = (
         session.query(
             SurveyAnswer.unique_member_id,
+            SurveyAnswer.survey_question_id,
             SurveyAnswer.survey_log_id,
-            SurveyAnswer.answer.label('answer_text'),
+            SurveyAnswer.ik_number,
+            SurveyAnswer.answer,
+            SurveyAnswer.date_logged,
+            SurveyAnswer.staff_id,
+            SurveyAnswer.app_version,
+            SurveyAnswer.created_at.label('answer_created_at'),
+            SurveyAnswer.updated_at.label('answer_updated_at'),
+            SurveyAnswer.operator_id,
+            SurveyAnswer.desc,
+            SurveyAnswer.unique_entity_id,
             SurveyQuestion.survey_config_id,
-            SurveyQuestion.question.label('question_text'),
-            SurveyConfig.name.label('survey_name')
+            SurveyQuestion.question,
         )
         .join(SurveyQuestion, SurveyAnswer.survey_question_id == SurveyQuestion.survey_question_id)
-        .join(SurveyConfig, SurveyQuestion.survey_config_id == SurveyConfig.survey_config_id)
         .filter(SurveyQuestion.survey_config_id == survey_id)
-        .order_by(SurveyAnswer.unique_member_id, SurveyAnswer.survey_log_id, SurveyQuestion.order)
-        .statement, engine)
+        .order_by(
+            SurveyAnswer.unique_member_id,
+            SurveyAnswer.survey_log_id,
+            SurveyQuestion.order
+        )
+    )
+    df = pd.read_sql(query.statement, engine)
     session.close()
 
-    wide = (df.pivot_table(
-        index=['unique_member_id', 'survey_log_id', 'survey_config_id', 'survey_name'],
-        columns='question_text', values='answer_text', aggfunc='first')
-        .reset_index())
+    if df.empty:
+        return "No responses found for this survey.", 404
+
+    # Pivot to transpose responses: each question becomes a column
+    pivot_index = [
+        'survey_config_id', 'unique_member_id', 'survey_log_id', 'ik_number',
+        'date_logged', 'staff_id', 'app_version',
+        'answer_created_at', 'answer_updated_at', 'operator_id', 'desc', 'unique_entity_id'
+    ]
+    df['question'] = df['question'].str.strip()
+    wide = (
+        df
+        .pivot_table(
+            index=pivot_index,
+            columns='question',
+            values='answer',
+            aggfunc='first'
+        )
+        .reset_index()
+    )
     wide.columns.name = None
 
+    # Export to CSV
     buf = io.StringIO()
     wide.to_csv(buf, index=False)
     buf.seek(0)
+    csv_bytes = buf.getvalue().encode('utf-8')
 
     return send_file(
-        io.BytesIO(buf.getvalue().encode()),
+        io.BytesIO(csv_bytes),
         mimetype='text/csv',
         as_attachment=True,
         download_name=f'survey_{survey_id}_responses.csv'
     )
-# if code breaks, delete line 80-91
+
 @app.route('/api/surveys')
 def api_surveys():
-    # Return full list of surveys for real-time updates
     session = Session()
     surveys = session.query(SurveyConfig).order_by(SurveyConfig.survey_config_id).all()
     session.close()
     data = [
-        { 'id': s.survey_config_id, 'name': s.name, 'description': s.description }
+        {'id': s.survey_config_id, 'name': s.name, 'description': s.description}
         for s in surveys
     ]
     return jsonify(data)
