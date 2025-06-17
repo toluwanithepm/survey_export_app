@@ -16,7 +16,7 @@ class SurveyConfig(Base):
     updated_at = Column(DateTime)
 
 class SurveyQuestion(Base):
-    __tablename__ = 'survey_questions_entity'
+    __tablename__ = 'survey_question_entity'
     survey_question_id = Column(Integer, primary_key=True)
     survey_config_id = Column(Integer, ForeignKey('survey_config_entity.survey_config_id'))
     order = Column(Integer)
