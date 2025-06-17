@@ -51,17 +51,7 @@ def download():
     #     return "Survey ID is required", 400
     
     # Extract numeric ID if it's in format "survey_config_74"
-    if isinstance(survey_id_param, str) and survey_id_param.startswith('survey_config_'):
-        try:
-            survey_id = int(survey_id_param.replace('survey_config_', ''))
-        except ValueError:
-            return "Invalid survey ID format", 400
-    else:
-        # Try to convert to int directly
-        try:
-            survey_id = int(survey_id_param)
-        except (ValueError, TypeError):
-            return "Invalid survey ID format", 400
+
     
     session = Session()
     
