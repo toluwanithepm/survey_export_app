@@ -47,8 +47,8 @@ def index():
 def download():
     survey_id = request.args.get('survey_config_id')  # remove `type=int`
 
-    if not survey_id_param:
-        return "Survey ID is required", 400
+    # if not survey_id_param:
+    #     return "Survey ID is required", 400
     
     # Extract numeric ID if it's in format "survey_config_74"
     if isinstance(survey_id_param, str) and survey_id_param.startswith('survey_config_'):
