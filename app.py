@@ -1,5 +1,6 @@
 import io
 import os
+import re
 from flask import Flask, render_template, send_file, request, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -10,13 +11,11 @@ from models import SurveyConfig, SurveyQuestion, SurveyAnswer
 
 # Load environment
 load_dotenv()
-DATABASE_URL = os.getenv('DATABASE_URL')
-
-# Initialize app & DB
 env_url = os.getenv('DATABASE_URL')
 if not env_url:
     raise RuntimeError("DATABASE_URL is not set in environment variables")
 
+# Initialize Flask and DB
 app = Flask(__name__)
 engine = create_engine(env_url)
 Session = sessionmaker(bind=engine)
@@ -25,7 +24,6 @@ Session = sessionmaker(bind=engine)
 def index():
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 20, type=int)
-
     session = Session()
     total = session.query(SurveyConfig).count()
     surveys = (
@@ -36,10 +34,8 @@ def index():
         .all()
     )
     session.close()
-
     if not surveys:
         return render_template('empty.html')
-
     total_pages = (total + limit - 1) // limit
     return render_template('index.html', surveys=surveys,
                            page=page, limit=limit,
@@ -47,14 +43,20 @@ def index():
 
 @app.route('/download')
 def download():
-    survey_id = request.args.get('survey_config_id')  # remove `type=int`
-    if not survey_id:
+    raw_id = request.args.get('survey_config_id')
+    if not raw_id:
         return "Missing survey_config_id", 400
+    # Extract numeric ID suffix
+    match = re.search(r"(\d+)$", raw_id)
+    if not match:
+        return "Invalid survey_config_id format", 400
+    survey_id = int(match.group(1))
 
     session = Session()
-    # Join the three tables to collect all information
+    # Join answer and question tables
     query = (
         session.query(
+            SurveyQuestion.survey_config_id,
             SurveyAnswer.unique_member_id,
             SurveyAnswer.survey_question_id,
             SurveyAnswer.survey_log_id,
@@ -68,43 +70,39 @@ def download():
             SurveyAnswer.operator_id,
             SurveyAnswer.desc,
             SurveyAnswer.unique_entity_id,
-            SurveyQuestion.survey_config_id,
-            SurveyQuestion.question,
+            SurveyQuestion.question.label('question_text')
         )
         .join(SurveyQuestion, SurveyAnswer.survey_question_id == SurveyQuestion.survey_question_id)
         .filter(SurveyQuestion.survey_config_id == survey_id)
-        .order_by(
-            SurveyAnswer.unique_member_id,
-            SurveyAnswer.survey_log_id,
-            SurveyQuestion.order
-        )
+        .order_by(SurveyAnswer.unique_member_id,
+                  SurveyAnswer.survey_log_id,
+                  SurveyQuestion.order)
     )
     df = pd.read_sql(query.statement, engine)
     session.close()
 
     if df.empty:
-        return "No responses found for this survey.", 404
+        return render_template('error.html', code=404, message='No responses found for this survey.'), 404
 
-    # Pivot to transpose responses: each question becomes a column
-    pivot_index = [
-        'survey_config_id', 'unique_member_id', 'survey_log_id', 'ik_number',
-        'date_logged', 'staff_id', 'app_version',
-        'answer_created_at', 'answer_updated_at', 'operator_id', 'desc', 'unique_entity_id'
+    # Pivot to transpose responses
+    pivot_idx = [
+        'survey_config_id', 'unique_member_id', 'survey_question_id',
+        'survey_log_id', 'ik_number', 'date_logged', 'staff_id',
+        'app_version', 'answer_created_at', 'answer_updated_at',
+        'operator_id', 'desc', 'unique_entity_id'
     ]
-    df['question'] = df['question'].str.strip()
+    df['question_text'] = df['question_text'].str.strip()
     wide = (
-        df
-        .pivot_table(
-            index=pivot_index,
-            columns='question',
+        df.pivot_table(
+            index=pivot_idx,
+            columns='question_text',
             values='answer',
             aggfunc='first'
-        )
-        .reset_index()
+        ).reset_index()
     )
     wide.columns.name = None
 
-    # Export to CSV
+    # Export CSV
     buf = io.StringIO()
     wide.to_csv(buf, index=False)
     buf.seek(0)
@@ -123,7 +121,7 @@ def api_surveys():
     surveys = session.query(SurveyConfig).order_by(SurveyConfig.survey_config_id).all()
     session.close()
     data = [
-        {'id': s.survey_config_id, 'name': s.name, 'description': s.description}
+        { 'id': f'survey_config_{s.survey_config_id}', 'name': s.name, 'description': s.description }
         for s in surveys
     ]
     return jsonify(data)
@@ -138,6 +136,7 @@ def not_found(e):
 def server_error(e):
     return render_template('error.html', code=500,
                            message='Something went sideways on our end.'), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
