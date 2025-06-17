@@ -45,10 +45,23 @@ def index():
 
 @app.route('/download')
 def download():
-    survey_id = request.args.get('survey_config_id', type=int)
+    survey_id_param = request.args.get('survey_config_id')
     
-    if not survey_id:
+    if not survey_id_param:
         return "Survey ID is required", 400
+    
+    # Extract numeric ID if it's in format "survey_config_74"
+    if isinstance(survey_id_param, str) and survey_id_param.startswith('survey_config_'):
+        try:
+            survey_id = int(survey_id_param.replace('survey_config_', ''))
+        except ValueError:
+            return "Invalid survey ID format", 400
+    else:
+        # Try to convert to int directly
+        try:
+            survey_id = int(survey_id_param)
+        except (ValueError, TypeError):
+            return "Invalid survey ID format", 400
     
     session = Session()
     
