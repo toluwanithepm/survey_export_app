@@ -46,16 +46,31 @@ def index():
 @app.route('/download')
 def download():
     survey_id = request.args.get('survey_config_id')  # remove `type=int`
-
+    
     # if not survey_id_param:
     #     return "Survey ID is required", 400
     
-    # Extract numeric ID if it's in format "survey_config_74"
-
+    # # Use the parameter as-is if it's already in the correct format
+    # # or extract numeric part if needed
+    # if isinstance(survey_id_param, str) and survey_id_param.startswith('survey_config_'):
+    #     # If your database stores the full "survey_config_74" format, use this
+    #     survey_id = survey_id_param
+    # else:
+    #     # If your database stores just the numeric part, try to extract it
+    #     try:
+    #         numeric_id = int(survey_id_param)
+    #         survey_id = str(numeric_id)  # Convert to string for text column
+    #     except (ValueError, TypeError):
+    #         return "Invalid survey ID format", 400
     
     session = Session()
     
     try:
+        # First, let's check if the survey exists
+        survey_exists = session.query(SurveyConfig).filter(SurveyConfig.survey_config_id == survey_id).first()
+        if not survey_exists:
+            return f"Survey with ID {survey_id} not found", 404
+        
         # Query to get all survey response data with proper joins
         query = session.query(
             SurveyConfig.survey_config_id,
@@ -80,31 +95,63 @@ def download():
         .order_by(SurveyAnswer.unique_member_id, SurveyAnswer.date_logged, SurveyQuestion.order)
         
         # Execute query and create DataFrame
-        df = pd.read_sql(query.statement, engine)
+        df = pd.read_sql(query.statement, engine, params=query.statement.compile().params)
+        
+        print(f"DataFrame shape: {df.shape}")  # Debug info
+        print(f"DataFrame columns: {df.columns.tolist()}")  # Debug info
         
         if df.empty:
-            return "No data found for the specified survey", 404
+            # Let's check if there are any questions for this survey
+            questions_query = session.query(SurveyQuestion).filter(SurveyQuestion.survey_config_id == survey_id)
+            questions_count = questions_query.count()
+            
+            # Let's check if there are any answers for questions in this survey
+            answers_query = session.query(SurveyAnswer).join(SurveyQuestion).filter(SurveyQuestion.survey_config_id == survey_id)
+            answers_count = answers_query.count()
+            
+            return f"No data found for survey {survey_id}. Survey has {questions_count} questions and {answers_count} total answers.", 404
         
-        # Create the transposed CSV
-        # First, create a pivot table for the answers
-        pivot_df = df.pivot_table(
-            index=[
-                'survey_config_id', 
-                'unique_member_id', 
-                'ik_number',
-                'date_logged',
-                'staff_id',
-                'app_version',
-                'created_at',
-                'updated_at',
-                'operator_id',
-                'desc',
-                'unique_entity_id'
-            ],
-            columns='question_text',
-            values='answer',
-            aggfunc='first'
-        ).reset_index()
+        # Print first few rows for debugging
+        print("First 3 rows of data:")
+        print(df.head(3).to_string())
+        
+        # Check if we have the required columns for pivoting
+        required_cols = ['unique_member_id', 'question_text', 'answer']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            return f"Missing required columns for pivot: {missing_cols}", 500
+        
+        # Create a simpler pivot first to test
+        try:
+            # Group by response (unique_member_id + date_logged combination)
+            pivot_df = df.pivot_table(
+                index=[
+                    'survey_config_id', 
+                    'unique_member_id', 
+                    'date_logged'  # Use fewer columns initially to test
+                ],
+                columns='question_text',
+                values='answer',
+                aggfunc='first'
+            ).reset_index()
+            
+            print(f"Pivot DataFrame shape: {pivot_df.shape}")  # Debug info
+            
+        except Exception as pivot_error:
+            print(f"Pivot error: {str(pivot_error)}")
+            # If pivot fails, return the raw data as CSV
+            csv_buffer = io.StringIO()
+            df.to_csv(csv_buffer, index=False)
+            csv_buffer.seek(0)
+            
+            csv_bytes = io.BytesIO(csv_buffer.getvalue().encode('utf-8'))
+            
+            return send_file(
+                csv_bytes,
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=f'survey_{survey_id}_raw_data.csv'
+            )
         
         # Clean up column names
         pivot_df.columns.name = None
@@ -113,6 +160,8 @@ def download():
         csv_buffer = io.StringIO()
         pivot_df.to_csv(csv_buffer, index=False)
         csv_buffer.seek(0)
+        
+        print(f"CSV buffer length: {len(csv_buffer.getvalue())}")  # Debug info
         
         # Convert to bytes for download
         csv_bytes = io.BytesIO(csv_buffer.getvalue().encode('utf-8'))
