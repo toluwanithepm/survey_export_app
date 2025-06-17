@@ -45,8 +45,8 @@ def index():
 
 @app.route('/download')
 def download():
-    survey_id_param = request.args.get('survey_config_id')
-    
+    survey_id = request.args.get('survey_config_id')  # remove `type=int`
+
     if not survey_id_param:
         return "Survey ID is required", 400
     
