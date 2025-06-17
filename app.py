@@ -127,16 +127,16 @@ def api_surveys():
     return jsonify(data)
 
 # Error handlers
+def render_error(code, message):
+    return render_template('error.html', code=code, message=message), code
+
 @app.errorhandler(404)
-def not_found(e):
-    return render_template('error.html', code=404,
-                           message='Looks like this page took a coffee break.'), 404
+def handle_404(e):
+    return render_error(404, 'Page not found.')
 
 @app.errorhandler(500)
-def server_error(e):
-    return render_template('error.html', code=500,
-                           message='Something went sideways on our end.'), 500
-
+def handle_500(e):
+    return render_error(500, 'Internal server error.')
 
 if __name__ == '__main__':
     app.run(debug=True)
