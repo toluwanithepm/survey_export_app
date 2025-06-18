@@ -1,5 +1,6 @@
 import io
 import os
+from urllib import response
 from flask import Flask, render_template, send_file, request, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -152,7 +153,11 @@ def download():
                 as_attachment=True,
                 download_name=f'survey_{survey_id}_raw_data.csv'
             )
-        
+            # Add headers to force CSV download
+            response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+            response.headers['Content-Disposition'] = f'attachment; filename=survey_{survey_id}_raw_data.csv'
+            
+            return response
         # Clean up column names
         pivot_df.columns.name = None
         
@@ -166,12 +171,19 @@ def download():
         # Convert to bytes for download
         csv_bytes = io.BytesIO(csv_buffer.getvalue().encode('utf-8'))
         
-        return send_file(
+        # Create the response with explicit headers
+        response = send_file(
             csv_bytes,
             mimetype='text/csv',
             as_attachment=True,
             download_name=f'survey_{survey_id}_responses.csv'
         )
+        
+        # Add additional headers to force CSV download
+        response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+        response.headers['Content-Disposition'] = f'attachment; filename=survey_{survey_id}_responses.csv'
+        
+        return response
         
     except Exception as e:
         return f"Error generating CSV: {str(e)}", 500
