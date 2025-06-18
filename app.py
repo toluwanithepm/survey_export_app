@@ -145,22 +145,19 @@ def download():
             df.to_csv(csv_buffer, index=False)
             csv_buffer.seek(0)
             
-            csv_bytes = io.BytesIO(csv_buffer.getvalue().encode('utf-8'))
+            # Create CSV response directly for raw data
+            csv_content = csv_buffer.getvalue()
             
-            return send_file(
-                csv_bytes,
+            response = Response(
+                csv_content,
                 mimetype='text/csv',
-                as_attachment=True,
-                download_name=f'survey_{survey_id}_raw_data.csv'
+                headers={
+                    'Content-Disposition': f'attachment; filename="survey_{survey_id}_raw_data.csv"',
+                    'Content-Type': 'text/csv; charset=utf-8'
+                }
             )
-            # Add headers to force CSV download
-            response.headers['Content-Type'] = 'text/csv; charset=utf-8'
-            response.headers['Content-Disposition'] = f'attachment; filename=survey_{survey_id}_raw_data.csv'
             
             return response
-        # Clean up column names
-        pivot_df.columns.name = None
-        
         # Create CSV buffer
         csv_buffer = io.StringIO()
         pivot_df.to_csv(csv_buffer, index=False)
@@ -168,20 +165,18 @@ def download():
         
         print(f"CSV buffer length: {len(csv_buffer.getvalue())}")  # Debug info
         
-        # Convert to bytes for download
-        csv_bytes = io.BytesIO(csv_buffer.getvalue().encode('utf-8'))
+        # Create CSV response directly
+        csv_content = csv_buffer.getvalue()
         
-        # Create the response with explicit headers
-        response = send_file(
-            csv_bytes,
+        # Create response with proper headers
+        response = Response(
+            csv_content,
             mimetype='text/csv',
-            as_attachment=True,
-            download_name=f'survey_{survey_id}_responses.csv'
+            headers={
+                'Content-Disposition': f'attachment; filename="survey_{survey_id}_responses.csv"',
+                'Content-Type': 'text/csv; charset=utf-8'
+            }
         )
-        
-        # Add additional headers to force CSV download
-        response.headers['Content-Type'] = 'text/csv; charset=utf-8'
-        response.headers['Content-Disposition'] = f'attachment; filename=survey_{survey_id}_responses.csv'
         
         return response
         

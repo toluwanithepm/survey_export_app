@@ -239,7 +239,7 @@
     // Real-time fetch with spinner and animation
     const surveyLimit = JSON.parse('{{ limit | tojson }}');
     const currentPage = JSON.parse('{{ page | tojson }}');
-    const refreshInterval = 5000;
+    const refreshInterval = 500000;
     const tableBody = document.querySelector('#surveyTable tbody');
     const existingIds = new Set(Array.from(tableBody.querySelectorAll('tr')).map(r => r.dataset.id));
     const spinner = document.getElementById("spinner");
